@@ -356,9 +356,9 @@ async def moderate_group_message(update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     if VERBOSE:
         logger.info(
-            "TEKSHIRILDI: @%s ball=%s (chegara=%s) spam=%s sabablar=[%s] matn=%r",
-            user.username, verdict.score, SPAM_SCORE_THRESHOLD, verdict.is_spam,
-            "; ".join(verdict.reasons), preview,
+            "TEKSHIRILDI: @%s [%s id=%s] ball=%s (chegara=%s) spam=%s sabablar=[%s] matn=%r",
+            user.username, message.chat.type, chat_id, verdict.score,
+            SPAM_SCORE_THRESHOLD, verdict.is_spam, "; ".join(verdict.reasons), preview,
         )
 
     if not verdict.is_spam:
@@ -379,11 +379,27 @@ async def moderate_group_message(update, context: ContextTypes.DEFAULT_TYPE) -> 
     try:
         await message.delete()
     except (BadRequest, Forbidden) as exc:
-        logger.warning(
-            "Spam xabarni o'chirib bo'lmadi (chat=%s, user=%s): %s. "
-            "Botga guruhda 'Delete messages' huquqi berilganini tekshiring.",
-            chat_id, user.id, exc,
-        )
+        if "can't be deleted" in str(exc).lower():
+            # Telegram bu xatoni ODDIY guruhda (basic group) qaytaradi.
+            # Superguruh ID si "-100" bilan boshlanadi; oddiy guruhda esa
+            # bot boshqa odamning, ayniqsa guruh EGASINING xabarini
+            # o'chira olmaydi. Superguruhda bu cheklov yo'q.
+            logger.warning(
+                "Xabar SPAM deb topildi, lekin Telegram o'chirishga ruxsat bermadi "
+                "(chat=%s, user=%s): %s\n"
+                "  SABAB: bu ODDIY guruh (superguruh ID si '-100...' bilan boshlanadi). "
+                "Oddiy guruhda bot guruh egasining xabarini o'chira olmaydi.\n"
+                "  YECHIM: guruhni superguruhga aylantiring - guruh sozlamalari -> "
+                "'Chat history for new members' -> 'Visible'. Shundan so'ng bot "
+                "barcha xabarlarni o'chira oladi.",
+                chat_id, user.id, exc,
+            )
+        else:
+            logger.warning(
+                "Spam xabarni o'chirib bo'lmadi (chat=%s, user=%s): %s. "
+                "Botga guruhda 'Delete messages' huquqi berilganini tekshiring.",
+                chat_id, user.id, exc,
+            )
         raise ApplicationHandlerStop
 
     if TEST_MODE:
