@@ -55,6 +55,12 @@ SPAM_SCORE_THRESHOLD = 3
 # (qolaversa, Telegram guruh egasini bloklashga umuman ruxsat bermaydi).
 TEST_MODE = False
 
+# VERBOSE — yoqilganda bot guruhda KO'RGAN har bir xabarni, uning ballini va
+# nima uchun chora ko'rilmaganini logga yozadi. "Bot nega ishlamayapti?"
+# savolini aniqlashtirish uchun: agar log butunlay bo'sh bo'lsa, demak
+# xabarlar botga umuman yetib bormayapti (Privacy Mode yoki admin huquqi).
+VERBOSE = False
+
 # ---------------------------------------------------------------------------
 # 1) Matnni normallashtirish — filtrni chetlab o'tish urinishlariga qarshi
 #    (ko'rinmas belgilar, kirill-lotin harf almashtirish, turli tirnoqchalar)
@@ -327,17 +333,36 @@ async def moderate_group_message(update, context: ContextTypes.DEFAULT_TYPE) -> 
     bot o'chirilgan spam xabarga AI javobi bilan javob bermaydi).
     """
     message = update.effective_message
-    if message is None or message.from_user is None or message.from_user.is_bot:
-        return
-    if not (message.text or message.caption):
+    if message is None:
         return
 
-    verdict = analyze_message(message)
-    if not verdict.is_spam:
+    preview = (message.text or message.caption or "")[:60]
+
+    if message.from_user is None or message.from_user.is_bot:
+        # Anonim yuborilgan xabarlar (guruh egasi "Remain anonymous" rejimida
+        # yozganda) @GroupAnonymousBot nomidan keladi va shu yerda to'xtaydi.
+        if VERBOSE:
+            logger.info(
+                "O'TKAZIB YUBORILDI (yuboruvchi bot yoki anonim admin): %r", preview
+            )
+        return
+
+    if not (message.text or message.caption):
         return
 
     chat_id = message.chat_id
     user = message.from_user
+    verdict = analyze_message(message)
+
+    if VERBOSE:
+        logger.info(
+            "TEKSHIRILDI: @%s ball=%s (chegara=%s) spam=%s sabablar=[%s] matn=%r",
+            user.username, verdict.score, SPAM_SCORE_THRESHOLD, verdict.is_spam,
+            "; ".join(verdict.reasons), preview,
+        )
+
+    if not verdict.is_spam:
+        return
 
     if TEST_MODE:
         logger.warning(

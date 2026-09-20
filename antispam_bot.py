@@ -118,7 +118,12 @@ def main() -> None:
         "--test",
         action="store_true",
         help="sinov rejimi: admin himoyasi ishlamaydi va hech kim bloklanmaydi "
-             "(spam xabar faqat o'chiriladi)",
+             "(spam xabar faqat o'chiriladi). Batafsil logni ham yoqadi",
+    )
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="guruhda ko'rilgan HAR BIR xabarni va uning ballini logga yozadi",
     )
     args = parser.parse_args()
 
@@ -130,6 +135,8 @@ def main() -> None:
 
     antispam.SPAM_SCORE_THRESHOLD = SPAM_SCORE_THRESHOLD
     antispam.TEST_MODE = test_mode
+    # Sinov rejimida batafsil log har doim kerak bo'ladi.
+    antispam.VERBOSE = args.verbose or test_mode
 
     if test_mode:
         logger.warning("=" * 60)
