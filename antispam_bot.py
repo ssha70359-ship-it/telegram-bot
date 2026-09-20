@@ -27,6 +27,7 @@ from __future__ import annotations
 import argparse
 import logging
 import os
+import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -58,6 +59,16 @@ def ensure_token() -> str:
     token = os.environ.get("TELEGRAM_BOT_TOKEN")
     if token:
         return token
+
+    # Serverda (Railway, Render va h.k.) klaviatura yo'q - u yerda token
+    # so'rashga urinsak, bot javob kutib osilib qoladi. Shuning uchun
+    # interaktiv bo'lmagan muhitda darhol tushunarli xato beramiz.
+    if not sys.stdin.isatty():
+        raise SystemExit(
+            "TELEGRAM_BOT_TOKEN topilmadi.\n"
+            "Serverda ishlayotgan bo'lsangiz, uni muhit o'zgaruvchisi "
+            "(environment variable) sifatida qo'shing."
+        )
 
     print("\nTELEGRAM_BOT_TOKEN topilmadi.")
     print("@BotFather bergan bot tokenini kiriting va Enter bosing:")
@@ -125,6 +136,16 @@ async def status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     # effective_message ishlatiladi: kanalga yozilgan buyruqda update.message
     # bo'sh bo'ladi va bot xato bilan to'xtardi.
     await update.effective_message.reply_text("\n".join(lines))
+
+
+async def on_error(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Kutilmagan xatoni yozib qo'yadi va botning ishlashda davom etishini
+    ta'minlaydi.
+
+    Bunisiz bitta nuqsonli xabar butun jarayonni to'xtatib, guruh
+    himoyasiz qolishi mumkin edi.
+    """
+    logger.error("Xabarni qayta ishlashda kutilmagan xatolik", exc_info=context.error)
 
 
 async def _log_identity(application: Application) -> None:
@@ -215,6 +236,8 @@ def main() -> None:
     application.add_handler(CommandHandler("start", start, filters.ChatType.PRIVATE))
     # Guruh ichida yozilsa, botning o'sha guruhdagi holatini ko'rsatadi.
     application.add_handler(CommandHandler("status", status))
+
+    application.add_error_handler(on_error)
 
     logger.info("Anti-spam bot polling rejimida (spam_threshold=%s)...", SPAM_SCORE_THRESHOLD)
     # drop_pending_updates=True — eski, navbatda turib qolgan xabarlar qayta
