@@ -122,6 +122,60 @@ SPAM_PHRASE_PATTERNS: list[re.Pattern] = [
     re.compile(r"\bjonli\s*efir\w*.{0,15}(pul|to'lov)\w*"),
 ]
 
+# ---------------------------------------------------------------------------
+# QO'LDA SOZLANADIGAN KALIT SO'ZLAR — yangi so'zni shu ikki ro'yxatga qo'shing
+# ---------------------------------------------------------------------------
+# So'zlar BUTUN SO'Z sifatida qidiriladi, lekin o'zbekcha qo'shimchalar bilan
+# ham topiladi: "kazino" -> "kazinoda", "kazinoga" ham tutiladi; ammo
+# "alfabet" ichidagi "bet" TUTILMAYDI.
+#
+# DIQQAT: qisqa va ko'p ma'noli so'zlarni ("bet", "pul", "qiz") bu yerga
+# QO'SHMANG. Masalan "bet" — "beton", "betob", "betakror" so'zlarining
+# boshida ham turadi va oddiy foydalanuvchilar bloklanib ketadi. Shuning
+# uchun qimor uchun brend nomlari (1xbet, melbet) ishlatilgan.
+#
+# t.me havolalari va 18+ emojilar allaqachon yuqorida hisobga olingan —
+# ularni bu ro'yxatga qo'shish ikki marta ball berib, yolg'on musbatga
+# olib keladi.
+
+# Yolg'iz o'zi yetarli (ball 3): faqat spam xabarlarda uchraydigan so'zlar
+BLOCK_KEYWORDS = [
+    "profilimga",
+    "intim",
+    "18+",
+    "kazino",
+    "casino",
+    "bukmeker",
+    "1xbet",
+    "melbet",
+    "mostbet",
+    "pinup",
+    "vulkan",
+]
+
+# Zaif signal (ball 2): boshqa belgi bilan birga kelgandagina chora ko'riladi
+SUSPICIOUS_KEYWORDS = [
+    "stavka",
+    "pul topish",
+    "pul ishlash",
+    "tezda boyish",
+    "promokod",
+    "aksiya",
+]
+
+
+def _compile_keyword(word: str) -> re.Pattern:
+    """Kalit so'zni 'so'z boshidan' qidiradigan shablonga aylantiradi.
+
+    Boshida (?<!\\w) turadi — so'z ichidan topilmaydi ("alfabet" dagi "bet").
+    Oxirida \\w* turadi — o'zbekcha qo'shimchalar tutiladi ("kazinoda").
+    """
+    return re.compile(r"(?<!\w)" + re.escape(normalize_text(word)) + r"\w*")
+
+
+_BLOCK_PATTERNS = [_compile_keyword(w) for w in BLOCK_KEYWORDS]
+_SUSPICIOUS_PATTERNS = [_compile_keyword(w) for w in SUSPICIOUS_KEYWORDS]
+
 # 18+ mazmunni bildiruvchi (kontekstsiz ham shubha uyg'otadigan) emojilar
 ADULT_EMOJIS = {
     "💋", "🔞", "🍑", "🍆", "💦", "👅", "🩲", "👙", "🍒", "😈", "🥵", "🫦",
@@ -220,6 +274,21 @@ def analyze_message(message: Message) -> SpamVerdict:
     if len(_EMOJI_RE.findall(raw_text)) >= 8:
         score += 1
         reasons.append("haddan tashqari ko'p emoji")
+
+    # 8) Qo'lda sozlangan kalit so'zlar (BLOCK_KEYWORDS / SUSPICIOUS_KEYWORDS)
+    for pattern in _BLOCK_PATTERNS:
+        match = pattern.search(text)
+        if match:
+            score += 3
+            reasons.append(f"taqiqlangan so'z: {match.group()}")
+            break
+
+    for pattern in _SUSPICIOUS_PATTERNS:
+        match = pattern.search(text)
+        if match:
+            score += 2
+            reasons.append(f"shubhali so'z: {match.group()}")
+            break
 
     is_spam = score >= SPAM_SCORE_THRESHOLD
     return SpamVerdict(is_spam=is_spam, score=score, reasons=reasons)
