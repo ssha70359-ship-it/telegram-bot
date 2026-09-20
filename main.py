@@ -17,6 +17,7 @@ from telegram.ext import (
     filters,
 )
 
+import antispam
 from system_prompt import SYSTEM_PROMPT
 
 load_dotenv()
@@ -28,6 +29,7 @@ ANTHROPIC_MAX_TOKENS = int(os.environ.get("ANTHROPIC_MAX_TOKENS", "1024"))
 ANTHROPIC_EFFORT = os.environ.get("ANTHROPIC_EFFORT", "medium")
 MAX_HISTORY_MESSAGES = int(os.environ.get("MAX_HISTORY_MESSAGES", "20"))
 LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
+SPAM_SCORE_THRESHOLD = int(os.environ.get("SPAM_SCORE_THRESHOLD", "3"))
 
 TELEGRAM_MESSAGE_LIMIT = 4096
 
@@ -174,7 +176,23 @@ def main() -> None:
     if not ANTHROPIC_API_KEY:
         raise RuntimeError("ANTHROPIC_API_KEY muhit o'zgaruvchisi topilmadi (.env faylini tekshiring).")
 
+    antispam.SPAM_SCORE_THRESHOLD = SPAM_SCORE_THRESHOLD
+
     application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
+
+    # Guruh/superguruh xabarlarini spam uchun tekshiruvchi handler — group=-1
+    # bilan pastdagi handlerlardan OLDIN ishlaydi va spam aniqlansa
+    # ApplicationHandlerStop orqali qolgan handlerlarni (jumladan AI javobini)
+    # to'xtatadi. `effective_message` orqali yangi va tahrirlangan
+    # xabarlarning ikkalasi ham avtomatik qamrab olinadi (spam-botlar ko'pincha
+    # avval zararsiz xabar yozib, keyin uni spamga tahrirlashadi).
+    application.add_handler(
+        MessageHandler(
+            filters.ChatType.GROUPS & (filters.TEXT | filters.CAPTION),
+            antispam.moderate_group_message,
+        ),
+        group=-1,
+    )
 
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", help_command))
@@ -182,7 +200,10 @@ def main() -> None:
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     application.add_handler(MessageHandler(~filters.TEXT & ~filters.COMMAND, handle_unsupported))
 
-    logger.info("Bot ishga tushmoqda (model=%s)...", ANTHROPIC_MODEL)
+    logger.info(
+        "Bot ishga tushmoqda (model=%s, spam_threshold=%s)...",
+        ANTHROPIC_MODEL, SPAM_SCORE_THRESHOLD,
+    )
     application.run_polling(allowed_updates=Update.ALL_TYPES)
 
 
