@@ -88,6 +88,43 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     )
 
 
+async def status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Guruh ichida yozilganda botning o'sha guruhdagi holatini ko'rsatadi.
+
+    Bitta buyruq bilan "bot shu yerdami, admin bo'lganmi, o'chira oladimi"
+    degan savollarning hammasiga javob beradi.
+    """
+    chat = update.effective_chat
+    me = await context.bot.get_me()
+    member = await context.bot.get_chat_member(chat.id, context.bot.id)
+
+    lines = [
+        f"Bot: @{me.username}",
+        f"Guruh: {chat.type} (id={chat.id})",
+        f"Holat: {member.status}",
+    ]
+
+    if member.status == "administrator":
+        can_delete = "HA" if member.can_delete_messages else "YO'Q"
+        can_ban = "HA" if member.can_restrict_members else "YO'Q"
+        lines.append(f"Xabar o'chirish: {can_delete}")
+        lines.append(f"Bloklash: {can_ban}")
+    else:
+        lines.append("DIQQAT: bot ADMIN EMAS - hech narsa o'chira olmaydi.")
+
+    if chat.type == "group":
+        lines.append(
+            "DIQQAT: bu oddiy guruh. Superguruhga aylantiring: "
+            "sozlamalar -> 'Chat history for new members' -> 'Visible'."
+        )
+
+    lines.append(f"Spam chegarasi: {antispam.SPAM_SCORE_THRESHOLD}")
+    if antispam.TEST_MODE:
+        lines.append("TEST REJIMI yoqilgan: hech kim bloklanmaydi.")
+
+    await update.message.reply_text("\n".join(lines))
+
+
 async def _log_identity(application: Application) -> None:
     """Bot ishga tushishi bilan QAYSI bot akkaunti ekanini va oldin webhook
     o'rnatilgan-o'rnatilmaganini logga yozadi.
@@ -159,6 +196,8 @@ def main() -> None:
     )
     # Shaxsiy chatda botning qaysi bot ekanini tasdiqlash uchun.
     application.add_handler(CommandHandler("start", start, filters.ChatType.PRIVATE))
+    # Guruh ichida yozilsa, botning o'sha guruhdagi holatini ko'rsatadi.
+    application.add_handler(CommandHandler("status", status))
 
     logger.info("Anti-spam bot polling rejimida (spam_threshold=%s)...", SPAM_SCORE_THRESHOLD)
     # drop_pending_updates=True — eski, navbatda turib qolgan xabarlar qayta
