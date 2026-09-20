@@ -16,7 +16,6 @@ Skript ketma-ket tekshiradi:
 from __future__ import annotations
 
 import asyncio
-import os
 import sys
 import time
 
@@ -26,6 +25,7 @@ from telegram.constants import ChatMemberStatus
 from telegram.error import Conflict, InvalidToken, NetworkError, TelegramError
 
 import antispam
+from antispam_bot import ensure_token
 
 load_dotenv()
 
@@ -178,10 +178,7 @@ async def listen(bot: Bot) -> None:
 
 
 async def run() -> None:
-    token = os.environ.get("TELEGRAM_BOT_TOKEN")
-    if not token:
-        print("XATO: TELEGRAM_BOT_TOKEN topilmadi (.env faylini tekshiring).")
-        sys.exit(1)
+    token = ensure_token()
 
     try:
         bot = Bot(token)

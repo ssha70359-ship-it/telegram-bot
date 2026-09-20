@@ -6,8 +6,10 @@ olinadi.
 
 Ishga tushirish:
     pip install -r requirements.txt
-    export TELEGRAM_BOT_TOKEN="<@BotFather bergan token>"
     python antispam_bot.py
+
+Token .env faylida yoki muhit o'zgaruvchisida topilmasa, bot uni ishga
+tushganda so'raydi va .env fayliga o'zi saqlaydi.
 
 MUHIM: har bir Telegram boti uchun ALOHIDA token ishlating. Bitta token ikki
 xil dasturda (masalan, eski do'kon/buyurtma boti va shu anti-spam boti)
@@ -20,16 +22,17 @@ from __future__ import annotations
 
 import logging
 import os
+from pathlib import Path
 
 from dotenv import load_dotenv
 from telegram import Update
+from telegram.error import InvalidToken, NetworkError
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
 
 import antispam
 
 load_dotenv()
 
-TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
 SPAM_SCORE_THRESHOLD = int(os.environ.get("SPAM_SCORE_THRESHOLD", "3"))
 
@@ -38,6 +41,34 @@ logging.basicConfig(
     level=LOG_LEVEL,
 )
 logger = logging.getLogger(__name__)
+
+
+def ensure_token() -> str:
+    """Tokenni topadi; topilmasa foydalanuvchidan so'rab, .env ga saqlaydi.
+
+    Shu tufayli botni ishga tushirish uchun qo'lda .env yaratish yoki muhit
+    o'zgaruvchisi bilan ovora bo'lish shart emas.
+    """
+    token = os.environ.get("TELEGRAM_BOT_TOKEN")
+    if token:
+        return token
+
+    print("\nTELEGRAM_BOT_TOKEN topilmadi.")
+    print("@BotFather bergan bot tokenini kiriting va Enter bosing:")
+    token = input("TOKEN: ").strip()
+    if not token:
+        raise SystemExit("Token kiritilmadi. Bot ishga tushmadi.")
+
+    env_path = Path(__file__).resolve().parent / ".env"
+    # encoding="utf-8" BOM yozmaydi: BOM bo'lsa python-dotenv birinchi kalitni
+    # noto'g'ri o'qiydi va token keyingi safar yana "topilmadi" bo'lib chiqadi.
+    env_path.write_text(
+        f"TELEGRAM_BOT_TOKEN={token}\nSPAM_SCORE_THRESHOLD=3\nLOG_LEVEL=INFO\n",
+        encoding="utf-8",
+    )
+    print(f"Saqlandi: {env_path}")
+    print("Keyingi safar token qaytadan so'ralmaydi.\n")
+    return token
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -76,16 +107,12 @@ async def _log_identity(application: Application) -> None:
 
 
 def main() -> None:
-    if not TELEGRAM_BOT_TOKEN:
-        raise RuntimeError(
-            "TELEGRAM_BOT_TOKEN topilmadi. .env faylini to'ldiring yoki "
-            "muhit o'zgaruvchisi sifatida bering."
-        )
+    token = ensure_token()
 
     antispam.SPAM_SCORE_THRESHOLD = SPAM_SCORE_THRESHOLD
 
     application = (
-        Application.builder().token(TELEGRAM_BOT_TOKEN).post_init(_log_identity).build()
+        Application.builder().token(token).post_init(_log_identity).build()
     )
 
     # Guruh/superguruh xabarlarini tekshiruvchi asosiy handler.
@@ -102,10 +129,23 @@ def main() -> None:
     # drop_pending_updates=True — eski, navbatda turib qolgan xabarlar qayta
     # ishlanmasin (aks holda bot ishga tushishi bilan eski xabarlar uchun
     # ham chora ko'rishi mumkin).
-    application.run_polling(
-        allowed_updates=[Update.MESSAGE, Update.EDITED_MESSAGE],
-        drop_pending_updates=True,
-    )
+    try:
+        application.run_polling(
+            allowed_updates=[Update.MESSAGE, Update.EDITED_MESSAGE],
+            drop_pending_updates=True,
+        )
+    except InvalidToken:
+        raise SystemExit(
+            "\nXATO: token yaroqsiz.\n"
+            ".env faylidagi TELEGRAM_BOT_TOKEN ni tekshiring yoki @BotFather'dan "
+            "yangi token oling.\n"
+        )
+    except NetworkError as exc:
+        raise SystemExit(
+            f"\nXATO: Telegram serveriga ulanib bo'lmadi.\n{exc}\n\n"
+            "Internet aloqasini tekshiring. Agar Telegram bloklangan bo'lsa, "
+            "VPN yoki proxy kerak bo'ladi.\n"
+        )
 
 
 if __name__ == "__main__":

@@ -1,4 +1,4 @@
-# Anti-spam bot — Windows uchun avtomatik o'rnatish va ishga tushirish skripti.
+# Anti-spam bot - Windows uchun avtomatik o'rnatish va ishga tushirish skripti.
 #
 # Ishlatish (PowerShell'da, loyiha papkasi ichida):
 #     powershell -ExecutionPolicy Bypass -File setup.ps1
@@ -34,7 +34,7 @@ if ($missing) {
 Write-Host "[1/4] Fayllar joyida." -ForegroundColor Green
 
 # --- 2. Virtual muhit ---------------------------------------------------
-# Muhitni "activate" qilmaymiz — python.exe ga to'g'ridan-to'g'ri murojaat
+# Muhitni "activate" qilmaymiz - python.exe ga to'g'ridan-to'g'ri murojaat
 # qilamiz. Shunda Windows'dagi ExecutionPolicy cheklovi umuman xalaqit bermaydi.
 $venvPython = Join-Path $PSScriptRoot ".venv\Scripts\python.exe"
 
@@ -74,7 +74,7 @@ $envPath = Join-Path $PSScriptRoot ".env"
 
 if (-not (Test-Path $envPath)) {
     Write-Host ""
-    Write-Host "[4/4] .env fayli topilmadi — hozir yaratamiz." -ForegroundColor Yellow
+    Write-Host "[4/4] .env fayli topilmadi - hozir yaratamiz." -ForegroundColor Yellow
     Write-Host "@BotFather bergan bot tokenini kiriting va Enter bosing:"
     $token = Read-Host "TOKEN"
 
