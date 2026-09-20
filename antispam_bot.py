@@ -122,7 +122,9 @@ async def status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if antispam.TEST_MODE:
         lines.append("TEST REJIMI yoqilgan: hech kim bloklanmaydi.")
 
-    await update.message.reply_text("\n".join(lines))
+    # effective_message ishlatiladi: kanalga yozilgan buyruqda update.message
+    # bo'sh bo'ladi va bot xato bilan to'xtardi.
+    await update.effective_message.reply_text("\n".join(lines))
 
 
 async def _log_identity(application: Application) -> None:
