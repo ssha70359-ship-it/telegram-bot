@@ -8,6 +8,10 @@ Ishga tushirish:
     pip install -r requirements.txt
     python antispam_bot.py
 
+Sinov rejimida ishga tushirish (admin himoyasi ishlamaydi, hech kim
+bloklanmaydi - spam xabar faqat o'chiriladi):
+    python antispam_bot.py --test
+
 Token .env faylida yoki muhit o'zgaruvchisida topilmasa, bot uni ishga
 tushganda so'raydi va .env fayliga o'zi saqlaydi.
 
@@ -20,6 +24,7 @@ o'zining kimligini va webhook holatini logga aniq yozadi.
 
 from __future__ import annotations
 
+import argparse
 import logging
 import os
 from pathlib import Path
@@ -108,17 +113,30 @@ async def _log_identity(application: Application) -> None:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(description="Telegram guruhlari uchun anti-spam bot")
+    parser.add_argument(
+        "--test",
+        action="store_true",
+        help="sinov rejimi: admin himoyasi ishlamaydi va hech kim bloklanmaydi "
+             "(spam xabar faqat o'chiriladi)",
+    )
+    args = parser.parse_args()
+
+    # Rejim buyruq qatoridagi --test yoki .env dagi ANTISPAM_TEST_MODE orqali
+    # yoqiladi; ikkalasidan biri yetarli.
+    test_mode = TEST_MODE or args.test
+
     token = ensure_token()
 
     antispam.SPAM_SCORE_THRESHOLD = SPAM_SCORE_THRESHOLD
-    antispam.TEST_MODE = TEST_MODE
+    antispam.TEST_MODE = test_mode
 
-    if TEST_MODE:
+    if test_mode:
         logger.warning("=" * 60)
-        logger.warning("TEST REJIMI YOQILGAN (ANTISPAM_TEST_MODE=true)")
+        logger.warning("TEST REJIMI YOQILGAN")
         logger.warning("  - admin va guruh egasi himoyasi ISHLAMAYDI")
         logger.warning("  - spam xabar faqat O'CHIRILADI, hech kim BLOKLANMAYDI")
-        logger.warning("  Test tugagach .env dagi ANTISPAM_TEST_MODE ni false qiling!")
+        logger.warning("  Normal rejimga qaytish: --test siz ishga tushiring")
         logger.warning("=" * 60)
 
     application = (
