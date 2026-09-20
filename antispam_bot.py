@@ -41,7 +41,13 @@ load_dotenv()
 
 LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
 SPAM_SCORE_THRESHOLD = int(os.environ.get("SPAM_SCORE_THRESHOLD", "3"))
-TEST_MODE = os.environ.get("ANTISPAM_TEST_MODE", "").strip().lower() in ("1", "true", "yes")
+# Test rejimi FAQAT --test bayrog'i orqali yoqiladi. Ilgari uni .env dagi
+# ANTISPAM_TEST_MODE ham yoqa olardi va bu xavfli edi: faylda unutib
+# qoldirilgan bitta qator tufayli bot jonli rejimda ishlayapman deb
+# o'ylagan holda hech kimni bloklamasdi.
+_STALE_ENV_TEST_MODE = os.environ.get("ANTISPAM_TEST_MODE", "").strip().lower() in (
+    "1", "true", "yes",
+)
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -193,9 +199,14 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    # Rejim buyruq qatoridagi --test yoki .env dagi ANTISPAM_TEST_MODE orqali
-    # yoqiladi; ikkalasidan biri yetarli.
-    test_mode = TEST_MODE or args.test
+    test_mode = args.test
+
+    if _STALE_ENV_TEST_MODE and not test_mode:
+        logger.warning(
+            ".env faylida ANTISPAM_TEST_MODE=true qatori bor, lekin u endi "
+            "ISHLATILMAYDI - bot JONLI rejimda ishlayapti. O'sha qatorni "
+            "o'chirib tashlashingiz mumkin."
+        )
 
     token = ensure_token()
 
