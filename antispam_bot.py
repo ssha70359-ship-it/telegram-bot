@@ -225,9 +225,9 @@ def main() -> None:
              "narsani o'chirmaydi va hech kimni bloklamaydi (admin himoyasi ishlaydi)",
     )
     parser.add_argument(
-        "--verbose",
+        "--quiet",
         action="store_true",
-        help="guruhda ko'rilgan HAR BIR xabarni va uning ballini logga yozadi",
+        help="guruhda ko'rilgan har bir xabar haqidagi batafsil logni o'chiradi",
     )
     args = parser.parse_args()
 
@@ -245,8 +245,9 @@ def main() -> None:
     antispam.SPAM_SCORE_THRESHOLD = SPAM_SCORE_THRESHOLD
     antispam.TEST_MODE = test_mode
     antispam.DRY_RUN = args.dry_run
-    # Sinov va kuzatuv rejimlarida batafsil log har doim kerak bo'ladi.
-    antispam.VERBOSE = args.verbose or test_mode or args.dry_run
+    # Batafsil log sukut bo'yicha YOQIQ: "bot xabarni ko'rdimi yoki yo'qmi"
+    # degan savolga javob har doim ko'rinib tursin. --quiet bilan o'chiriladi.
+    antispam.VERBOSE = not args.quiet
 
     if args.dry_run:
         logger.warning("=" * 60)
