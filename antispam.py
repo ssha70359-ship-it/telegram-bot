@@ -131,8 +131,19 @@ PHONE_RE = re.compile(r"(?:\+?\d[\d\-\s()]{8,15}\d)")
 # intim-xizmat / "individualka" turidagi e'lonlarga xos so'z birikmalari).
 # Har biri `normalize_text` dan o'tgan matnga solishtiriladi.
 SPAM_PHRASE_PATTERNS: list[re.Pattern] = [
-    # "mening profilimga o't", "profilga o'ting", "profilimni ko'rib o't" kabi
-    re.compile(r"\bprofil(?:im|ing|imiz|ingiz|i)?(?:ga|ni|da|m)?\s+o'?t"),
+    # "profilimga o't", "profilga kir", "sahifamga kel" va shunga o'xshash
+    # chaqiriqlar. Spamerlar fe'lni tez-tez almashtirib turishadi, shuning
+    # uchun bitta emas, keng tarqalgan chaqiriq fe'llari ro'yxati olingan.
+    # \s+ talabi "profilaktika o'tkazish" kabi zararsiz iboralarni chetlab
+    # o'tishni ta'minlaydi (u yerda "profil" dan keyin bo'sh joy yo'q).
+    re.compile(
+        r"\bprofil(?:im|ing|imiz|ingiz|i)?(?:ga|ni|da|m)?"
+        r"\s+(?:o'?t|kir|kel|qara|boq|ko'?r|yoz|bos)"
+    ),
+    re.compile(
+        r"\bsahifa(?:m|ng|miz|ngiz)?(?:ga|ni|da)?"
+        r"\s+(?:o'?t|kir|kel|qara|boq|ko'?r|yoz|bos)"
+    ),
     re.compile(r"\btirno(?:q|g)\w*\s+olin\w*\s+qiz\b"),
     re.compile(r"\bindividualk\w*\b"),
     re.compile(r"\bintim\w*\s*xizmat\w*\b"),
