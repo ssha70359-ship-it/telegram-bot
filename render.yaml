@@ -1,0 +1,39 @@
+# Render.com uchun tayyor sozlama.
+#
+# Render -> New -> Blueprint -> shu repozitoriyani tanlang -> bu fayl o'qiladi.
+#
+# MUHIM: turi "web" qilib belgilangan, chunki Render'ning BEPUL tarifida
+# faqat web service mavjud (background worker pullik). Bot HTTP so'rovlarga
+# xizmat qilmaydi, lekin antispam_bot.py PORT o'zgaruvchisini ko'rganda
+# kichik "men tirikman" sahifasini ochadi va Render talabini qondiradi.
+#
+# Bepul web service 15 daqiqa jimlikdan keyin uxlab qoladi. Uxlamasligi
+# uchun uptimerobot.com yoki cron-job.org da 10 daqiqada bir marta shu
+# xizmat manziliga so'rov yuborishni sozlang.
+
+services:
+  - type: web
+    name: antispam-bot
+    runtime: python
+    plan: free
+    region: frankfurt
+
+    buildCommand: pip install -r requirements.txt
+    startCommand: python antispam_bot.py
+
+    healthCheckPath: /
+
+    envVars:
+      # Tokenni Render panelida qo'lda kiritasiz - u hech qachon
+      # repozitoriyaga yozilmaydi.
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+
+      - key: SPAM_SCORE_THRESHOLD
+        value: "3"
+
+      - key: LOG_LEVEL
+        value: "INFO"
+
+      - key: PYTHON_VERSION
+        value: "3.11.9"
