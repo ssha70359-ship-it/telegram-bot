@@ -35,6 +35,7 @@ load_dotenv()
 
 LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
 SPAM_SCORE_THRESHOLD = int(os.environ.get("SPAM_SCORE_THRESHOLD", "3"))
+TEST_MODE = os.environ.get("ANTISPAM_TEST_MODE", "").strip().lower() in ("1", "true", "yes")
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -110,6 +111,15 @@ def main() -> None:
     token = ensure_token()
 
     antispam.SPAM_SCORE_THRESHOLD = SPAM_SCORE_THRESHOLD
+    antispam.TEST_MODE = TEST_MODE
+
+    if TEST_MODE:
+        logger.warning("=" * 60)
+        logger.warning("TEST REJIMI YOQILGAN (ANTISPAM_TEST_MODE=true)")
+        logger.warning("  - admin va guruh egasi himoyasi ISHLAMAYDI")
+        logger.warning("  - spam xabar faqat O'CHIRILADI, hech kim BLOKLANMAYDI")
+        logger.warning("  Test tugagach .env dagi ANTISPAM_TEST_MODE ni false qiling!")
+        logger.warning("=" * 60)
 
     application = (
         Application.builder().token(token).post_init(_log_identity).build()

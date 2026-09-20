@@ -47,6 +47,14 @@ logger = logging.getLogger(__name__)
 
 SPAM_SCORE_THRESHOLD = 3
 
+# TEST REJIMI — .env dagi ANTISPAM_TEST_MODE orqali yoqiladi.
+# Yoqilganda: admin/guruh egasi himoyasi vaqtincha ishlamaydi (ya'ni o'z
+# akkauntingiz bilan ham sinab ko'ra olasiz) va BLOKLASH bajarilmaydi —
+# xabar faqat o'chiriladi. Bloklash qasddan o'tkazib yuboriladi, chunki
+# himoya o'chiq turganda tasodifan haqiqiy a'zoni bloklab qo'yish xavfi bor
+# (qolaversa, Telegram guruh egasini bloklashga umuman ruxsat bermaydi).
+TEST_MODE = False
+
 # ---------------------------------------------------------------------------
 # 1) Matnni normallashtirish — filtrni chetlab o'tish urinishlariga qarshi
 #    (ko'rinmas belgilar, kirill-lotin harf almashtirish, turli tirnoqchalar)
@@ -331,7 +339,12 @@ async def moderate_group_message(update, context: ContextTypes.DEFAULT_TYPE) -> 
     chat_id = message.chat_id
     user = message.from_user
 
-    if await _is_privileged_member(context.bot, chat_id, user.id):
+    if TEST_MODE:
+        logger.warning(
+            "TEST REJIMI: admin himoyasi o'chirilgan, %s (@%s) tekshirilmoqda.",
+            user.id, user.username,
+        )
+    elif await _is_privileged_member(context.bot, chat_id, user.id):
         logger.info(
             "Admin/owner %s (@%s) spam belgilari bilan xabar yubordi (ball=%s), chora ko'rilmadi.",
             user.id, user.username, verdict.score,
@@ -345,6 +358,14 @@ async def moderate_group_message(update, context: ContextTypes.DEFAULT_TYPE) -> 
             "Spam xabarni o'chirib bo'lmadi (chat=%s, user=%s): %s. "
             "Botga guruhda 'Delete messages' huquqi berilganini tekshiring.",
             chat_id, user.id, exc,
+        )
+        raise ApplicationHandlerStop
+
+    if TEST_MODE:
+        logger.warning(
+            "TEST REJIMI: SPAM aniqlandi va xabar O'CHIRILDI, bloklash bajarilmadi. "
+            "user_id=%s (@%s) ball=%s sabablar=[%s]",
+            user.id, user.username, verdict.score, "; ".join(verdict.reasons),
         )
         raise ApplicationHandlerStop
 
