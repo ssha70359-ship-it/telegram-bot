@@ -55,6 +55,14 @@ SPAM_SCORE_THRESHOLD = 3
 # (qolaversa, Telegram guruh egasini bloklashga umuman ruxsat bermaydi).
 TEST_MODE = False
 
+# DRY_RUN — "kuzatuv" rejimi: bot hamma narsani odatdagidek tekshiradi va
+# nima qilishini logga yozadi, lekin xabarni O'CHIRMAYDI va hech kimni
+# BLOKLAMAYDI. Haqiqiy guruhda jonli xabarlar ustida filtrni xavfsiz
+# tekshirib ko'rish uchun: bir-ikki kun shu rejimda ishlatib, birorta
+# zararsiz xabar tutilmasligiga ishonch hosil qilgach, rejimni o'chirasiz.
+# TEST_MODE dan farqi: bu yerda admin himoyasi ISHLAYDI.
+DRY_RUN = False
+
 # VERBOSE — yoqilganda bot guruhda KO'RGAN har bir xabarni, uning ballini va
 # nima uchun chora ko'rilmaganini logga yozadi. "Bot nega ishlamayapti?"
 # savolini aniqlashtirish uchun: agar log butunlay bo'sh bo'lsa, demak
@@ -375,6 +383,14 @@ async def moderate_group_message(update, context: ContextTypes.DEFAULT_TYPE) -> 
             user.id, user.username, verdict.score,
         )
         return
+
+    if DRY_RUN:
+        logger.warning(
+            "KUZATUV REJIMI: bu xabar O'CHIRILGAN va @%s BLOKLANGAN bo'lardi "
+            "(ball=%s) sabablar=[%s] matn=%r",
+            user.username, verdict.score, "; ".join(verdict.reasons), preview,
+        )
+        raise ApplicationHandlerStop
 
     try:
         await message.delete()

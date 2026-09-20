@@ -160,6 +160,12 @@ def main() -> None:
              "(spam xabar faqat o'chiriladi). Batafsil logni ham yoqadi",
     )
     parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="kuzatuv rejimi: spamni aniqlaydi va logga yozadi, lekin hech "
+             "narsani o'chirmaydi va hech kimni bloklamaydi (admin himoyasi ishlaydi)",
+    )
+    parser.add_argument(
         "--verbose",
         action="store_true",
         help="guruhda ko'rilgan HAR BIR xabarni va uning ballini logga yozadi",
@@ -174,8 +180,17 @@ def main() -> None:
 
     antispam.SPAM_SCORE_THRESHOLD = SPAM_SCORE_THRESHOLD
     antispam.TEST_MODE = test_mode
-    # Sinov rejimida batafsil log har doim kerak bo'ladi.
-    antispam.VERBOSE = args.verbose or test_mode
+    antispam.DRY_RUN = args.dry_run
+    # Sinov va kuzatuv rejimlarida batafsil log har doim kerak bo'ladi.
+    antispam.VERBOSE = args.verbose or test_mode or args.dry_run
+
+    if args.dry_run:
+        logger.warning("=" * 60)
+        logger.warning("KUZATUV REJIMI (--dry-run)")
+        logger.warning("  - spam aniqlanadi va logga yoziladi")
+        logger.warning("  - lekin HECH NARSA o'chirilmaydi va hech kim bloklanmaydi")
+        logger.warning("  Jonli guruhda filtrni xavfsiz tekshirish uchun.")
+        logger.warning("=" * 60)
 
     if test_mode:
         logger.warning("=" * 60)
