@@ -383,17 +383,17 @@ async def moderate_group_message(update, context: ContextTypes.DEFAULT_TYPE) -> 
     if not verdict.is_spam:
         return
 
+    # Spam xabar HAMMADAN o'chiriladi - admin yoki guruh egasi bo'lsa ham.
+    # Himoya faqat BLOKLASHga tegishli: xato o'chirilgan bitta xabar
+    # tiklanadigan yo'qotish, xato bloklangan admin esa jiddiy muammo.
     if TEST_MODE:
+        is_privileged = False
         logger.warning(
             "TEST REJIMI: admin himoyasi o'chirilgan, %s (@%s) tekshirilmoqda.",
             user.id, user.username,
         )
-    elif await _is_privileged_member(context.bot, chat_id, user.id):
-        logger.info(
-            "Admin/owner %s (@%s) spam belgilari bilan xabar yubordi (ball=%s), chora ko'rilmadi.",
-            user.id, user.username, verdict.score,
-        )
-        return
+    else:
+        is_privileged = await _is_privileged_member(context.bot, chat_id, user.id)
 
     if DRY_RUN:
         logger.warning(
@@ -434,6 +434,14 @@ async def moderate_group_message(update, context: ContextTypes.DEFAULT_TYPE) -> 
             "TEST REJIMI: SPAM aniqlandi va xabar O'CHIRILDI, bloklash bajarilmadi. "
             "user_id=%s (@%s) ball=%s sabablar=[%s]",
             user.id, user.username, verdict.score, "; ".join(verdict.reasons),
+        )
+        raise ApplicationHandlerStop
+
+    if is_privileged:
+        logger.info(
+            "Admin/guruh egasining spam xabari O'CHIRILDI, lekin u BLOKLANMADI "
+            "(himoyalangan): user_id=%s (@%s) ball=%s",
+            user.id, user.username, verdict.score,
         )
         raise ApplicationHandlerStop
 
