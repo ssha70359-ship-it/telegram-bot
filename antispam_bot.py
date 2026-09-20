@@ -28,6 +28,8 @@ import argparse
 import logging
 import os
 import sys
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -144,6 +146,36 @@ async def status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.effective_message.reply_text("\n".join(lines))
 
 
+def start_health_server() -> None:
+    """Render kabi bepul hostinglar uchun kichik HTTP sahifa ochadi.
+
+    Bepul tarifda faqat "web service" turi mavjud, u esa portga ulangan
+    dastur kutadi. Bizning bot HTTP so'rovlarga xizmat qilmaydi (u
+    Telegram'dan polling qiladi), shuning uchun shu kichik sahifa faqat
+    "men tirikman" deb javob berish uchun kerak.
+
+    PORT muhit o'zgaruvchisi bo'lmasa (kompyuterda ishlaganda) hech narsa
+    qilinmaydi.
+    """
+    port = os.environ.get("PORT")
+    if not port:
+        return
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self) -> None:
+            self.send_response(200)
+            self.send_header("Content-Type", "text/plain; charset=utf-8")
+            self.end_headers()
+            self.wfile.write("Anti-spam bot ishlayapti".encode("utf-8"))
+
+        def log_message(self, *args) -> None:
+            pass  # har bir ping logni to'ldirib yubormasin
+
+    server = HTTPServer(("0.0.0.0", int(port)), Handler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    logger.info("Health sahifasi %s portida ochildi (bepul hosting uchun).", port)
+
+
 async def on_error(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Kutilmagan xatoni yozib qo'yadi va botning ishlashda davom etishini
     ta'minlaydi.
@@ -249,6 +281,8 @@ def main() -> None:
     application.add_handler(CommandHandler("status", status))
 
     application.add_error_handler(on_error)
+
+    start_health_server()
 
     logger.info("Anti-spam bot polling rejimida (spam_threshold=%s)...", SPAM_SCORE_THRESHOLD)
     # drop_pending_updates=True — eski, navbatda turib qolgan xabarlar qayta
