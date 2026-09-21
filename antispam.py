@@ -144,6 +144,10 @@ SPAM_PHRASE_PATTERNS: list[re.Pattern] = [
         r"\bsahifa(?:m|ng|miz|ngiz)?(?:ga|ni|da)?"
         r"\s+(?:o'?t|kir|kel|qara|boq|ko'?r|yoz|bos)"
     ),
+    # "Tanishamizmi", "Tanishaylik", "Tanishasizmi" - soxta profillarning
+    # klassik boshlang'ich iborasi. Faqat shu uch shakl olingan: "tanishuv",
+    # "tanishtiraman", "tanishman" kabi zararsiz so'zlar tutilmaydi.
+    re.compile(r"\btanisha(?:miz|ylik|siz)\w*"),
     re.compile(r"\btirno(?:q|g)\w*\s+olin\w*\s+qiz\b"),
     re.compile(r"\bindividualk\w*\b"),
     re.compile(r"\bintim\w*\s*xizmat\w*\b"),
