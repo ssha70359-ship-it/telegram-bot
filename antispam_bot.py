@@ -266,7 +266,14 @@ def main() -> None:
         logger.warning("=" * 60)
 
     application = (
-        Application.builder().token(token).post_init(_log_identity).build()
+        Application.builder()
+        .token(token)
+        .post_init(_log_identity)
+        # Xabarlar navbat bilan emas, parallel qayta ishlanadi: spam odatda
+        # to'p-to'p kelgani uchun bittasini o'chirish qolganlarini kutdirib
+        # qo'ymaydi.
+        .concurrent_updates(True)
+        .build()
     )
 
     # Guruh/superguruh xabarlarini tekshiruvchi asosiy handler.
